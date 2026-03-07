@@ -1467,24 +1467,34 @@ function toggleNotif(on) {
 }
 
 // ─── BANK ────────────────────────────────────────────────────────────────────
-function toggleBank() {
+async function toggleBank() {
   if (!state.bankConnected) {
     if (ENABLEBANKING_APP_ID === 'VOTRE_APP_ID') {
       showToast('⚠️ Configurez votre App ID Enable Banking');
       return;
     }
-    // Lancer le flux OAuth Enable Banking
-    showToast('🏦 Ouverture Enable Banking...');
+    showToast('🏦 Préparation connexion...');
     const state_param = 'bb_' + Date.now();
     localStorage.setItem('eb_state', state_param);
-    const authUrl = `https://api.enablebanking.com/auth?` +
-      `app_id=${encodeURIComponent(ENABLEBANKING_APP_ID)}` +
-      `&redirect_uri=${encodeURIComponent(ENABLEBANKING_REDIRECT)}` +
-      `&aspsp_name=Credit%20Mutuel` +
-      `&aspsp_country=FR` +
-      `&state=${state_param}` +
-      `&access=TRANSACTIONS`;
-    window.location.href = authUrl;
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/sync-bank-eb`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'start_auth',
+          state: state_param,
+          redirect_uri: ENABLEBANKING_REDIRECT
+        })
+      });
+      const data = await r.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        showToast('❌ Erreur : ' + (data.message || JSON.stringify(data)));
+      }
+    } catch(e) {
+      showToast('❌ Erreur connexion');
+    }
   } else {
     if (confirm('Déconnecter le Crédit Mutuel ?')) {
       state.bankConnected = false;
