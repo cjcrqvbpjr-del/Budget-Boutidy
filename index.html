@@ -1534,7 +1534,8 @@ async function exchangeEnableBankingCode(code) {
       saveLocal();
       renderReglages();
       showToast(`✓ Crédit Mutuel connecté ! ${data.synced || 0} transaction(s) importée(s)`);
-      renderHome(); renderDepenses();
+await supabaseFetch();
+renderHome(); renderDepenses();
     } else {
       showToast('❌ Erreur de connexion bancaire');
     }
