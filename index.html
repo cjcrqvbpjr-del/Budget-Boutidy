@@ -473,7 +473,7 @@ input[type=number].setting-input:focus { border-color: var(--accent); }
 
     <!-- Objectif global -->
     <div class="card">
-      <div class="card-label">Objectif du mois</div>
+      <div class="card-label">Total épargne ce mois</div>
       <div class="prog-row" style="margin-bottom:0">
         <div class="prog-top">
           <span class="prog-label" id="epargne-total-label">Total épargne</span>
@@ -483,41 +483,8 @@ input[type=number].setting-input:focus { border-color: var(--accent); }
       </div>
     </div>
 
-    <!-- LEP -->
-    <div class="epargne-card">
-      <div class="epargne-header">
-        <div>
-          <div class="epargne-name">💰 LEP</div>
-          <div style="font-size:11px;color:var(--text3)">Livret d'Épargne Populaire</div>
-        </div>
-        <div class="epargne-solde" id="lep-solde">—</div>
-      </div>
-      <div class="prog-row" style="margin-bottom:0">
-        <div class="prog-top">
-          <span class="prog-label">Objectif mensuel</span>
-          <span class="prog-nums" id="lep-nums">—</span>
-        </div>
-        <div class="prog-bar"><div class="prog-fill" id="lep-bar" style="width:0%;background:var(--blue)"></div></div>
-      </div>
-    </div>
-
-    <!-- Livret Bleu Cassie -->
-    <div class="epargne-card">
-      <div class="epargne-header">
-        <div>
-          <div class="epargne-name">💙 Livret Bleu Cassie</div>
-          <div style="font-size:11px;color:var(--text3)">Versements mensuels</div>
-        </div>
-        <div class="epargne-solde" id="lbc-solde">—</div>
-      </div>
-      <div class="prog-row" style="margin-bottom:0">
-        <div class="prog-top">
-          <span class="prog-label">Ce mois</span>
-          <span class="prog-nums" id="lbc-nums">—</span>
-        </div>
-        <div class="prog-bar"><div class="prog-fill" id="lbc-bar" style="width:0%;background:var(--blue)"></div></div>
-      </div>
-    </div>
+    <!-- Comptes dynamiques -->
+    <div id="epargne-cards-list"></div>
 
     <!-- Charts -->
     <div class="section-title">Répartition des dépenses</div>
@@ -578,34 +545,16 @@ input[type=number].setting-input:focus { border-color: var(--accent); }
         <input type="number" class="setting-input" id="set-foncier" placeholder="0" onchange="saveSetting('foncier',this.value)">
       </div>
       <div class="setting-item">
-        <div><div class="setting-label">Budget mensuel variable</div><div class="setting-sub">Enveloppe dépenses courantes</div></div>
-        <input type="number" class="setting-input" id="set-budget" placeholder="0" onchange="saveSetting('budget_variable',this.value)">
+        <div><div class="setting-label">Budget mensuel variable</div><div class="setting-sub">Calculé auto : revenus − épargne − charges</div></div>
+        <div id="budget-auto-display" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--accent)">—</div>
       </div>
     </div>
 
     <!-- Épargne -->
-    <div class="section-title">Épargne</div>
-    <div class="setting-group">
-      <div class="setting-item">
-        <div><div class="setting-label">Objectif épargne mensuel</div></div>
-        <input type="number" class="setting-input" id="set-obj-epargne" placeholder="0" onchange="saveSetting('obj_epargne',this.value)">
-      </div>
-      <div class="setting-item">
-        <div><div class="setting-label">Solde LEP</div></div>
-        <input type="number" class="setting-input" id="set-lep" placeholder="0" onchange="saveSetting('lep_solde',this.value)">
-      </div>
-      <div class="setting-item">
-        <div><div class="setting-label">Objectif LEP mensuel</div></div>
-        <input type="number" class="setting-input" id="set-lep-obj" placeholder="0" onchange="saveSetting('lep_obj',this.value)">
-      </div>
-      <div class="setting-item">
-        <div><div class="setting-label">Solde Livret Bleu Cassie</div></div>
-        <input type="number" class="setting-input" id="set-lbc" placeholder="0" onchange="saveSetting('lbc_solde',this.value)">
-      </div>
-      <div class="setting-item">
-        <div><div class="setting-label">Objectif LBC mensuel</div></div>
-        <input type="number" class="setting-input" id="set-lbc-obj" placeholder="0" onchange="saveSetting('lbc_obj',this.value)">
-      </div>
+    <div class="section-title">Comptes épargne</div>
+    <div class="setting-group" id="epargne-comptes-list"></div>
+    <div style="padding:0 16px;margin-bottom:12px">
+      <button class="btn btn-secondary" style="width:100%" onclick="openAddEpargne()">+ Ajouter un compte épargne</button>
     </div>
 
     <!-- Notifications & Thème -->
@@ -796,16 +745,15 @@ let state = {
     { id:11, nom:'Spotify', montant:10, emoji:'🎵', type:'Loisirs' },
     { id:12, nom:'iPhone', montant:35, emoji:'📱', type:'Télécom' },
   ],
+  epargneComptes: [
+    { id:1, nom:'LEP', emoji:'💰', solde:8200, versement:150 },
+    { id:2, nom:'Livret Bleu Cassie', emoji:'💙', solde:3400, versement:100 },
+  ],
   settings: {
     salaire_g: 2200,
     salaire_a: 1800,
     foncier: 301,
     budget_variable: 1500,
-    obj_epargne: 350,
-    lep_solde: 8200,
-    lep_obj: 150,
-    lbc_solde: 3400,
-    lbc_obj: 100,
   },
   activeUser: 'G',
   currentMonth: new Date().getMonth(),
@@ -827,7 +775,7 @@ const CATEGORIES = [
   { emoji:'🏠', name:'Maison' }, { emoji:'👗', name:'Vêtements' },
   { emoji:'🎮', name:'Loisirs' }, { emoji:'🐾', name:'Animaux' },
   { emoji:'📦', name:'Amazon' }, { emoji:'👶', name:'Enfants' },
-  { emoji:'✂️', name:'Coiffeur' },{ emoji:'📌', name:'Autre' },
+  { emoji:'✂️', name:'Coiffeur' },{ emoji:'📌', name:'Autre' },{ emoji:'💰', name:'Épargne' },
 ];
 const CAT_COLORS = {
   '🛒':'rgba(91,140,255,.15)','🍽️':'rgba(255,184,77,.15)','⛽':'rgba(200,241,53,.12)',
@@ -1021,26 +969,81 @@ function getCatName(emoji) {
 
 // ─── RENDER ÉPARGNE ───────────────────────────────────────────────────────────
 function renderEpargne() {
-  const s = state.settings;
-  const lep_pct = Math.min(100, Math.round((s.lep_versement||0) / (s.lep_obj||1) * 100));
-  const lbc_pct = Math.min(100, Math.round((s.lbc_versement||0) / (s.lbc_obj||1) * 100));
-  const total_pct = Math.min(100, Math.round((s.epargne_versee||0) / (s.obj_epargne||1) * 100));
+  const comptes = state.epargneComptes || [];
+  const totalVersement = comptes.reduce((a,c) => a + (c.versement||0), 0);
+  const totalSolde = comptes.reduce((a,c) => a + (c.solde||0), 0);
 
-  document.getElementById('epargne-total-label').textContent = `Épargne totale`;
-  document.getElementById('epargne-total-nums').textContent = `${fmtShort(s.epargne_versee||0)} / ${fmtShort(s.obj_epargne||0)}`;
-  document.getElementById('epargne-total-bar').style.width = total_pct + '%';
+  document.getElementById('epargne-total-label').textContent = `Total épargne — ${fmtShort(totalSolde)}`;
+  document.getElementById('epargne-total-nums').textContent = `${fmtShort(totalVersement)} / mois`;
+  document.getElementById('epargne-total-bar').style.width = '100%';
 
-  document.getElementById('lep-solde').textContent = fmtShort(s.lep_solde||0);
-  document.getElementById('lep-nums').textContent = `${fmtShort(s.lep_versement||0)} / ${fmtShort(s.lep_obj||0)}`;
-  document.getElementById('lep-bar').style.width = lep_pct + '%';
-
-  document.getElementById('lbc-solde').textContent = fmtShort(s.lbc_solde||0);
-  document.getElementById('lbc-nums').textContent = `${fmtShort(s.lbc_versement||0)} / ${fmtShort(s.lbc_obj||0)}`;
-  document.getElementById('lbc-bar').style.width = lbc_pct + '%';
+  const container = document.getElementById('epargne-cards-list');
+  container.innerHTML = comptes.map(c => `
+    <div class="epargne-card">
+      <div class="epargne-header">
+        <div>
+          <div class="epargne-name">${c.emoji} ${c.nom}</div>
+          <div style="font-size:11px;color:var(--text3)">Versement mensuel : ${fmtShort(c.versement||0)}</div>
+        </div>
+        <div class="epargne-solde">${fmtShort(c.solde||0)}</div>
+      </div>
+    </div>`).join('');
 
   drawPieChart();
   drawLineChart();
 }
+
+function renderEpargneComptesList() {
+  const el = document.getElementById('epargne-comptes-list');
+  if (!el) return;
+  el.innerHTML = (state.epargneComptes||[]).map(c => `
+    <div class="setting-item">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <span style="font-size:18px">${c.emoji}</span>
+        <div style="min-width:0">
+          <div class="setting-label" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nom}</div>
+          <div class="setting-sub">Solde : <input type="number" value="${c.solde||0}" style="background:none;border:none;border-bottom:1px solid var(--border2);color:var(--text);font-size:11px;width:70px;padding:0" onchange="updateEpargneCompte(${c.id},'solde',this.value)">€ — Vers. : <input type="number" value="${c.versement||0}" style="background:none;border:none;border-bottom:1px solid var(--border2);color:var(--accent);font-size:11px;width:50px;padding:0" onchange="updateEpargneCompte(${c.id},'versement',this.value)">€/mois</div>
+        </div>
+      </div>
+      <button onclick="deleteEpargneCompte(${c.id})" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0">🗑</button>
+    </div>`).join('');
+}
+
+function updateEpargneCompte(id, field, val) {
+  const c = (state.epargneComptes||[]).find(c => c.id === id);
+  if (c) c[field] = parseFloat(val)||0;
+  computeBudget();
+  saveLocal();
+  renderHome();
+  renderEpargne();
+}
+
+function deleteEpargneCompte(id) {
+  if (!confirm('Supprimer ce compte épargne ?')) return;
+  state.epargneComptes = (state.epargneComptes||[]).filter(c => c.id !== id);
+  computeBudget();
+  saveLocal();
+  renderReglages();
+  renderEpargne();
+  showToast('🗑 Compte supprimé');
+}
+
+function openAddEpargne() {
+  const nom = prompt('Nom du compte (ex: LEP, PEL, Livret A) :');
+  if (!nom) return;
+  const emoji = prompt('Emoji (ex: 💰 💙 🏦 💵) :', '💰') || '💰';
+  const solde = parseFloat(prompt('Solde actuel (€) :', '0') || '0');
+  const versement = parseFloat(prompt('Versement mensuel (€) :', '0') || '0');
+  state.epargneComptes = state.epargneComptes || [];
+  state.epargneComptes.push({ id: Date.now(), nom, emoji, solde, versement });
+  computeBudget();
+  saveLocal();
+  renderReglages();
+  renderEpargne();
+  showToast('✓ Compte épargne ajouté');
+}
+
+
 
 // ─── PIE CHART ────────────────────────────────────────────────────────────────
 function drawPieChart() {
@@ -1219,14 +1222,10 @@ function renderReglages() {
   document.getElementById('set-salaire-g').value = s.salaire_g||'';
   document.getElementById('set-salaire-a').value = s.salaire_a||'';
   document.getElementById('set-foncier').value = s.foncier||'';
-  document.getElementById('set-budget').value = s.budget_variable||'';
-  document.getElementById('set-obj-epargne').value = s.obj_epargne||'';
-  document.getElementById('set-lep').value = s.lep_solde||'';
-  document.getElementById('set-lep-obj').value = s.lep_obj||'';
-  document.getElementById('set-lbc').value = s.lbc_solde||'';
-  document.getElementById('set-lbc-obj').value = s.lbc_obj||'';
+  computeBudget();
   document.getElementById('who-g-btn').className = 'chip' + (state.activeUser==='G' ? ' on' : '');
   document.getElementById('who-a-btn').className = 'chip' + (state.activeUser==='A' ? ' on-b' : '');
+  renderEpargneComptesList();
 
   // Charges list
   const cl = document.getElementById('charges-list');
@@ -1237,8 +1236,9 @@ function renderReglages() {
         <div class="charge-name">${c.nom}</div>
         <div class="charge-type">${c.type}</div>
       </div>
-      <input type="number" class="setting-input" value="${c.montant}" style="width:80px"
+      <input type="number" class="setting-input" value="${c.montant}" style="width:72px"
         onchange="updateCharge(${c.id}, this.value)">
+      <button onclick="deleteCharge(${c.id})" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0">🗑</button>
     </div>`).join('');
 
   // Bank status
@@ -1407,10 +1407,30 @@ function setFilter(f, btn) {
 }
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
+function computeBudget() {
+  const s = state.settings;
+  const revenus = (s.salaire_g||0) + (s.salaire_a||0) + (s.foncier||0);
+  const totalCharges = state.charges.reduce((a,c) => a + (c.montant||0), 0);
+  const totalEpargne = (state.epargneComptes||[]).reduce((a,c) => a + (c.versement||0), 0);
+  const budget = Math.max(0, revenus - totalCharges - totalEpargne);
+  state.settings.budget_variable = budget;
+  const el = document.getElementById('budget-auto-display');
+  if (el) el.textContent = fmt(budget);
+  return budget;
+}
 function saveSetting(key, val) {
   state.settings[key] = parseFloat(val) || 0;
+  computeBudget();
   saveLocal();
   renderHome();
+}
+function deleteCharge(id) {
+  if (!confirm('Supprimer cette charge ?')) return;
+  state.charges = state.charges.filter(c => c.id !== id);
+  saveLocal();
+  renderReglages();
+  renderHome();
+  showToast('🗑 Charge supprimée');
 }
 function updateCharge(id, val) {
   const c = state.charges.find(c => c.id === id);
@@ -1432,13 +1452,17 @@ function toggleNotif(on) {
   if (on && 'Notification' in window) {
     Notification.requestPermission().then(p => {
       if (p === 'granted') {
+        localStorage.setItem('bb_notif', '1');
         showToast('✓ Notifications activées');
         registerServiceWorker();
       } else {
+        localStorage.setItem('bb_notif', '0');
         showToast('Notifications refusées');
         document.getElementById('toggle-notif').checked = false;
       }
     });
+  } else {
+    localStorage.setItem('bb_notif', '0');
   }
 }
 
@@ -1674,6 +1698,7 @@ function saveLocal() {
   localStorage.setItem('bb_depenses', JSON.stringify(state.depenses));
   localStorage.setItem('bb_settings', JSON.stringify(state.settings));
   localStorage.setItem('bb_charges', JSON.stringify(state.charges));
+  localStorage.setItem('bb_epargne', JSON.stringify(state.epargneComptes));
   localStorage.setItem('bb_user', state.activeUser);
   localStorage.setItem('bb_bank', state.bankConnected ? '1' : '0');
 }
@@ -1682,9 +1707,11 @@ function loadLocal() {
     const d = localStorage.getItem('bb_depenses'); if (d) state.depenses = JSON.parse(d);
     const s = localStorage.getItem('bb_settings'); if (s) state.settings = { ...state.settings, ...JSON.parse(s) };
     const c = localStorage.getItem('bb_charges'); if (c) state.charges = JSON.parse(c);
+    const ep = localStorage.getItem('bb_epargne'); if (ep) state.epargneComptes = JSON.parse(ep);
     const u = localStorage.getItem('bb_user'); if (u) state.activeUser = u;
     const b = localStorage.getItem('bb_bank'); if (b) state.bankConnected = b === '1';
     const t = localStorage.getItem('theme'); if (t === 'light') { document.documentElement.setAttribute('data-theme','light'); document.getElementById('toggle-theme').checked = true; }
+    const n = localStorage.getItem('bb_notif'); if (n === '1') { document.getElementById('toggle-notif').checked = true; }
   } catch(e) {}
 }
 
@@ -1717,6 +1744,45 @@ function updateSyncIndicator(status) {
   else { dot.className='sync-dot error'; txt.textContent='Hors ligne — données locales'; }
 }
 
+// ─── AUTO ÉPARGNE 1er DU MOIS ─────────────────────────────────────────────────
+function checkAutoEpargne() {
+  const today = new Date();
+  if (today.getDate() !== 1) return;
+  const moisKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  const alreadyDone = localStorage.getItem('bb_epargne_auto_' + moisKey);
+  if (alreadyDone) return;
+
+  const comptes = state.epargneComptes || [];
+  if (!comptes.length) return;
+
+  let added = 0;
+  comptes.forEach(c => {
+    if (!c.versement || c.versement <= 0) return;
+    // Ajouter la dépense épargne
+    state.depenses.push({
+      id: 'epargne_' + c.id + '_' + moisKey,
+      date: today.toISOString().split('T')[0],
+      libelle: `Épargne — ${c.nom}`,
+      montant: -c.versement,
+      categorie: '💰',
+      personne: state.activeUser,
+      source: 'auto',
+      mois: moisKey,
+    });
+    // Alimenter le solde du compte
+    c.solde = (c.solde || 0) + c.versement;
+    added++;
+  });
+
+  if (added > 0) {
+    saveLocal();
+    localStorage.setItem('bb_epargne_auto_' + moisKey, '1');
+    const total = comptes.reduce((a,c) => a + (c.versement||0), 0);
+    showToast(`💰 ${added} virement(s) épargne du 1er : ${fmt(total)} ajoutés`);
+    renderEpargne();
+  }
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function init() {
   loadLocal();
@@ -1734,6 +1800,7 @@ function init() {
   }
 
   checkEnableBankingCallback();
+  checkAutoEpargne();
   renderHome();
 }
 
