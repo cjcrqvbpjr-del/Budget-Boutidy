@@ -1510,12 +1510,9 @@ function checkEnableBankingCallback() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const stateParam = params.get('state');
-  const savedState = localStorage.getItem('eb_state');
   if (code && stateParam) {
-  if (code && stateParam && stateParam === savedState) {    localStorage.removeItem('eb_state');
-    // Échanger le code contre une session via Supabase Edge Function
+    localStorage.removeItem('eb_state');
     exchangeEnableBankingCode(code);
-    // Nettoyer l'URL
     window.history.replaceState({}, '', window.location.pathname);
   }
 }
