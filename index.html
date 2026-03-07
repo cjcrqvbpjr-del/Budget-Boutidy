@@ -545,11 +545,14 @@ input[type=number].setting-input:focus { border-color: var(--accent); }
       <div class="bank-status">
         <div class="bank-logo">🏦</div>
         <div class="bank-info">
-          <div class="bank-name">Crédit Mutuel</div>
+          <div class="bank-name">Crédit Mutuel <span style="font-size:10px;color:var(--blue);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.5px;margin-left:4px">Enable Banking</span></div>
           <div class="bank-last-sync" id="bank-sync-label">Non connecté</div>
         </div>
         <button class="bank-btn" id="bank-btn" onclick="toggleBank()">Connecter</button>
       </div>
+    </div>
+    <div style="margin:0 16px 10px;padding:10px 14px;background:rgba(200,241,53,.07);border:1px solid rgba(200,241,53,.18);border-radius:10px;font-size:11px;color:var(--text3);line-height:1.5">
+      💡 Alternative gratuite : <span style="color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline" onclick="openModal('modal-csv')">importer un relevé CSV</span> depuis votre espace client Crédit Mutuel.
     </div>
 
     <!-- Charges fixes -->
@@ -769,6 +772,12 @@ input[type=number].setting-input:focus { border-color: var(--accent); }
 // ─── CONFIG SUPABASE (à remplir) ─────────────────────────────────────────────
 const SUPABASE_URL = 'https://nuscxkjfrzypfywacuiz.supabase.co'; // ex: https://xxxx.supabase.co
 const SUPABASE_KEY = 'sb_publishable_v-K_hPWsxk4G9YDArMvFhA_itOLKcEj';     // clé publique anon
+
+// ─── CONFIG ENABLE BANKING (à remplir) ───────────────────────────────────────
+// Inscription gratuite sur https://enablebanking.com
+// Créez une application → récupérez l'Application ID + la clé privée RSA
+const ENABLEBANKING_APP_ID = '75076a00-a33e-4ece-94df-a6de3ce2fa22';       // UUID de votre application
+const ENABLEBANKING_REDIRECT = 'https://cjcrqvbpjr-del.github.io/Budget-Boutidy/'; // ex: https://pseudo.github.io/budget-boutidy/
 
 // ─── ÉTAT GLOBAL ─────────────────────────────────────────────────────────────
 let state = {
@@ -1436,19 +1445,72 @@ function toggleNotif(on) {
 // ─── BANK ────────────────────────────────────────────────────────────────────
 function toggleBank() {
   if (!state.bankConnected) {
-    showToast('🏦 Ouverture GoCardless...');
-    // En production: window.location.href = GOCARDLESS_AUTH_URL;
-    setTimeout(() => {
-      state.bankConnected = true;
-      renderReglages();
-      showToast('✓ Crédit Mutuel connecté !');
-    }, 1500);
+    if (ENABLEBANKING_APP_ID === 'VOTRE_APP_ID') {
+      showToast('⚠️ Configurez votre App ID Enable Banking');
+      return;
+    }
+    // Lancer le flux OAuth Enable Banking
+    showToast('🏦 Ouverture Enable Banking...');
+    const state_param = 'bb_' + Date.now();
+    localStorage.setItem('eb_state', state_param);
+    const authUrl = `https://api.enablebanking.com/auth?` +
+      `app_id=${encodeURIComponent(ENABLEBANKING_APP_ID)}` +
+      `&redirect_uri=${encodeURIComponent(ENABLEBANKING_REDIRECT)}` +
+      `&aspsp_name=Credit%20Mutuel` +
+      `&aspsp_country=FR` +
+      `&state=${state_param}` +
+      `&access=TRANSACTIONS`;
+    window.location.href = authUrl;
   } else {
     if (confirm('Déconnecter le Crédit Mutuel ?')) {
       state.bankConnected = false;
+      localStorage.removeItem('eb_session_id');
       renderReglages();
       showToast('Compte bancaire déconnecté');
     }
+  }
+}
+
+// Intercepter le retour OAuth Enable Banking (callback dans l'URL)
+function checkEnableBankingCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const stateParam = params.get('state');
+  const savedState = localStorage.getItem('eb_state');
+  if (code && stateParam && stateParam === savedState) {
+    localStorage.removeItem('eb_state');
+    // Échanger le code contre une session via Supabase Edge Function
+    exchangeEnableBankingCode(code);
+    // Nettoyer l'URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+
+async function exchangeEnableBankingCode(code) {
+  showToast('🔄 Connexion bancaire en cours...');
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/sync-bank-eb`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ code, redirect_uri: ENABLEBANKING_REDIRECT })
+    });
+    if (r.ok) {
+      const data = await r.json();
+      localStorage.setItem('eb_session_id', data.session_id || '');
+      state.bankConnected = true;
+      saveLocal();
+      renderReglages();
+      showToast(`✓ Crédit Mutuel connecté ! ${data.synced || 0} transaction(s) importée(s)`);
+      renderHome(); renderDepenses();
+    } else {
+      showToast('❌ Erreur de connexion bancaire');
+    }
+  } catch(e) {
+    showToast('❌ Vérifiez votre connexion');
   }
 }
 
@@ -1673,6 +1735,7 @@ function init() {
     document.getElementById('sync-text').textContent = 'Mode local — configurez Supabase';
   }
 
+  checkEnableBankingCallback();
   renderHome();
 }
 
