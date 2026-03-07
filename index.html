@@ -51,7 +51,7 @@ body {
 
 /* ── LAYOUT ── */
 #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
-.screen { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+.screen { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 90px; }
 .screen.active { display: block; animation: fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
@@ -60,7 +60,7 @@ body {
   display: flex;
   background: var(--bg2);
   border-top: 1px solid var(--border);
-  padding: 8px 0 max(env(safe-area-inset-bottom, 16px), 16px);
+  padding: 8px 0 max(env(safe-area-inset-bottom), 8px);
   flex-shrink: 0;
   position: relative; z-index: 50;
 }
@@ -725,7 +725,7 @@ const SUPABASE_KEY = 'sb_publishable_v-K_hPWsxk4G9YDArMvFhA_itOLKcEj';     // cl
 // ─── CONFIG ENABLE BANKING (à remplir) ───────────────────────────────────────
 // Inscription gratuite sur https://enablebanking.com
 // Créez une application → récupérez l'Application ID + la clé privée RSA
-const ENABLEBANKING_APP_ID = '75076a00-a33e-4ece-94df-a6de3ce2fa22';       // UUID de votre application
+const ENABLEBANKING_APP_ID = 'b11ded1e-4a1c-4116-8358-e0ecee6353fc';       // UUID de votre application
 const ENABLEBANKING_REDIRECT = 'https://cjcrqvbpjr-del.github.io/Budget-Boutidy/'; // ex: https://pseudo.github.io/budget-boutidy/
 
 // ─── ÉTAT GLOBAL ─────────────────────────────────────────────────────────────
