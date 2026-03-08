@@ -957,7 +957,9 @@ function txHTML(d, withDelete = false) {
         ${sourceIcon}
       </div>
     </div>
-    <div class="tx-amount">-${fmt(Math.abs(d.montant))}</div>
+    <div class="tx-amount" style="color:${d.montant > 0 ? 'var(--accent)' : 'var(--red)'}">
+  ${d.montant > 0 ? '+' : '-'}${fmt(Math.abs(d.montant))}
+</div>
     ${withDelete ? '<div class="tx-delete-btn" onclick="event.stopPropagation();deleteDep(\''+d.id+'\')">🗑</div>' : ''}
   </div>`;
 }
