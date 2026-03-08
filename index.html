@@ -207,7 +207,11 @@ input[type=number].setting-input:focus{border-color:var(--accent);}
         <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8fb020);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:#000" id="user-avatar">G</div>
       </div>
     </div>
-    <div class="sync-row"><div class="sync-dot" id="sync-dot"></div><span class="sync-text" id="sync-text">Synchronisé à l'instant</span></div>
+    <div class="sync-row">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span class="sync-text" id="sync-text">Synchronisé à l'instant</span>
+  <button id="sync-btn" onclick="syncBank()" style="margin-left:auto;background:none;border:none;color:var(--blue);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;padding:2px 8px;border-radius:8px;border:1px solid rgba(91,140,255,.3);display:none">🔄 Sync</button>
+</div>
     <div class="alert-banner" id="alert-banner" style="display:none"><span class="alert-icon">⚠️</span><span class="alert-text" id="alert-text"></span></div>
     <div class="hero-card">
       <div class="hero-tag">Reste à vivre</div>
@@ -775,7 +779,7 @@ function renderReglages() {
       </div>
     </div>`).join('');
 
-  document.getElementById('bank-sync-label').textContent=state.bankConnected?'Connecté':'Non connecté';
+  updateBankSyncLabel();
   document.getElementById('bank-btn').textContent=state.bankConnected?'Déconnecter':'Connecter';
 }
 
@@ -931,23 +935,82 @@ function checkEnableBankingCallback() {
 async function exchangeEnableBankingCode(code) {
   showToast('🔄 Connexion bancaire en cours...');
   try {
-    const r=await fetch(`${SUPABASE_URL}/functions/v1/sync-bank-eb`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        code,
-        redirect_uri:ENABLEBANKING_REDIRECT,
-        charges_filters: buildChargesFilters()  // ← mots-clés depuis l'app
-      })
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/sync-bank-eb`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: ENABLEBANKING_REDIRECT, charges_filters: buildChargesFilters() })
     });
-    if(r.ok){
-      const data=await r.json();
-      localStorage.setItem('eb_session_id',data.session_id||'');
-      state.bankConnected=true;saveLocal();renderReglages();
-      showToast(`✓ Crédit Mutuel connecté ! ${data.synced||0} transaction(s) importée(s) — ${data.exclus||0} charge(s) filtrée(s)`);
-      await supabaseFetch();renderHome();renderDepenses();
-    } else showToast('❌ Erreur de connexion bancaire');
-  }catch(e){showToast('❌ Vérifiez votre connexion');}
+    if (r.ok) {
+      const data = await r.json();
+      state.bankConnected = true;
+      saveLocal();
+      renderReglages();
+      showToast(`✓ Crédit Mutuel connecté ! ${data.synced || 0} transaction(s) importée(s)`);
+      await supabaseFetch();
+      renderHome();
+      renderDepenses();
+      const sb = document.getElementById('sync-btn');
+      if (sb) sb.style.display = 'block';
+    } else {
+      showToast('❌ Erreur de connexion bancaire');
+    }
+  } catch(e) {
+    showToast('❌ Vérifiez votre connexion');
+  }
+}
+
+async function syncBank() {
+  if (!state.bankConnected) return;
+  const sb = document.getElementById('sync-btn');
+  if (sb) { sb.textContent = '⏳'; sb.disabled = true; }
+  updateSyncIndicator('syncing');
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/sync-bank-eb`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync', charges_filters: buildChargesFilters() })
+    });
+    if (r.ok) {
+      const data = await r.json();
+      if (data.error === 'no_session') {
+        state.bankConnected = false;
+        saveLocal();
+        renderReglages();
+        showToast('⚠️ Session expirée — reconnectez le Crédit Mutuel dans Réglages');
+        if (sb) sb.style.display = 'none';
+      } else {
+        if (data.synced > 0) {
+          await supabaseFetch();
+          renderHome();
+          renderDepenses();
+          showToast(`✓ ${data.synced} nouvelle(s) transaction(s)`);
+        }
+        updateSyncIndicator('ok');
+        localStorage.setItem('bb_last_bank_sync', new Date().toISOString());
+        updateBankSyncLabel();
+      }
+    } else {
+      updateSyncIndicator('error');
+      showToast('❌ Erreur de synchro bancaire');
+    }
+  } catch(e) {
+    updateSyncIndicator('error');
+  } finally {
+    if (sb) { sb.textContent = '🔄 Sync'; sb.disabled = false; }
+  }
+}
+
+function updateBankSyncLabel() {
+  const last = localStorage.getItem('bb_last_bank_sync');
+  const el = document.getElementById('bank-sync-label');
+  if (!el) return;
+  if (!state.bankConnected) { el.textContent = 'Non connecté'; return; }
+  if (last) {
+    const diff = Math.round((Date.now() - new Date(last).getTime()) / 60000);
+    el.textContent = diff < 1 ? 'Synchro à l\'instant' : diff < 60 ? `Synchro il y a ${diff} min` : `Synchro il y a ${Math.round(diff / 60)}h`;
+  } else {
+    el.textContent = 'Connecté';
+  }
 }
 
 // ─── CSV ─────────────────────────────────────────────────────────────────────
@@ -978,11 +1041,33 @@ function updateSyncIndicator(status){const dot=document.getElementById('sync-dot
 
 function checkAutoEpargne(){const today=new Date();if(today.getDate()!==1)return;const moisKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;if(localStorage.getItem('bb_epargne_auto_'+moisKey))return;const comptes=state.epargneComptes||[];let added=0;comptes.forEach(c=>{if(!c.versement||c.versement<=0)return;state.depenses.push({id:'epargne_'+c.id+'_'+moisKey,date:today.toISOString().split('T')[0],libelle:`Épargne — ${c.nom}`,montant:-c.versement,categorie:'💰',personne:state.activeUser,source:'auto',mois:moisKey});c.solde=(c.solde||0)+c.versement;added++;});if(added>0){saveLocal();localStorage.setItem('bb_epargne_auto_'+moisKey,'1');showToast(`💰 ${added} virement(s) épargne automatiques`);renderEpargne();}}
 
-function init(){
+function init() {
   loadLocal();
-  if(SUPABASE_URL!=='VOTRE_URL_SUPABASE'){state.supabaseAvailable=true;updateSyncIndicator('syncing');supabaseFetch().then(()=>updateSyncIndicator('ok')).catch(()=>updateSyncIndicator('error'));setInterval(()=>{updateSyncIndicator('syncing');supabaseFetch().then(()=>updateSyncIndicator('ok'));},30000);}
-  else{updateSyncIndicator('error');document.getElementById('sync-text').textContent='Mode local';}
-  checkEnableBankingCallback();checkAutoEpargne();renderHome();
+  if (SUPABASE_URL !== 'VOTRE_URL_SUPABASE') {
+    state.supabaseAvailable = true;
+    updateSyncIndicator('syncing');
+    supabaseFetch().then(() => {
+      updateSyncIndicator('ok');
+      if (state.bankConnected) {
+        const sb = document.getElementById('sync-btn');
+        if (sb) sb.style.display = 'block';
+        syncBank();
+      }
+    }).catch(() => updateSyncIndicator('error'));
+    setInterval(() => {
+      updateSyncIndicator('syncing');
+      supabaseFetch().then(() => updateSyncIndicator('ok'));
+    }, 30000);
+    setInterval(() => {
+      if (state.bankConnected) syncBank();
+    }, 15 * 60 * 1000);
+  } else {
+    updateSyncIndicator('error');
+    document.getElementById('sync-text').textContent = 'Mode local';
+  }
+  checkEnableBankingCallback();
+  checkAutoEpargne();
+  renderHome();
 }
 init();
 </script>
