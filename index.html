@@ -833,7 +833,7 @@ function renderHome() {
   const revenus = (s.salaire_g||0) + (s.salaire_a||0) + (s.foncier||0);
   const totalCharges = state.charges.reduce((a,c) => a + (c.montant||0), 0);
   const depMois = getMonthDepenses();
-  const totalDep = depMois.reduce((a,d) => a + Math.abs(d.montant), 0);
+  const totalDep = depMois.reduce((a,d) => a + d.montant, 0);
   const budget = s.budget_variable || 1500;
   const reste = budget - totalDep;
   const pct = Math.min(100, Math.round(totalDep / budget * 100));
@@ -897,7 +897,7 @@ function renderHome() {
 // ─── RENDER DÉPENSES ─────────────────────────────────────────────────────────
 function renderDepenses() {
   const depMois = getMonthDepenses();
-  const total = depMois.reduce((a,d) => a + Math.abs(d.montant), 0);
+  const total = depMois.reduce((a,d) => a + d.montant, 0);
   const budget = state.settings.budget_variable || 1500;
   const pct = Math.min(100, Math.round(total / budget * 100));
 
