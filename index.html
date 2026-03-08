@@ -947,6 +947,7 @@ async function exchangeEnableBankingCode(code) {
     if (r.ok) {
       const data = await r.json();
       state.bankConnected = true;
+      localStorage.setItem('eb_connected_at', new Date().toISOString());
       saveLocal();
       renderReglages();
       showToast(`✓ Crédit Mutuel connecté ! ${data.synced || 0} transaction(s) importée(s)`);
@@ -1020,6 +1021,22 @@ function updateBankSyncLabel() {
     el.textContent = 'Connecté';
   }
 }
+  
+  function checkBankSessionExpiry() {
+  if (!state.bankConnected) return;
+  const connectedAt = localStorage.getItem('eb_connected_at');
+  const connectedAt = localStorage.getItem('eb_connected_at');
+  if (!connectedAt) return;
+  const joursRestants = Math.floor((new Date(connectedAt).getTime() + 90 * 24 * 3600 * 1000 - Date.now()) / (24 * 3600 * 1000));
+  if (joursRestants <= 0) {
+    showToast('⚠️ Connexion bancaire expirée — reconnectez le Crédit Mutuel dans Réglages');
+    state.bankConnected = false;
+    saveLocal();
+    renderReglages();
+  } else if (joursRestants <= 7) {
+    showToast(`⚠️ Connexion bancaire expire dans ${joursRestants} jour(s) — pensez à reconnecter`);
+  }
+}
 
 // ─── CSV ─────────────────────────────────────────────────────────────────────
 let csvParsed=[];
@@ -1075,6 +1092,7 @@ function init() {
   }
   checkEnableBankingCallback();
   checkAutoEpargne();
+  checkBankSessionExpiry();
   renderHome();
 }
 init();
