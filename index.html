@@ -1100,6 +1100,12 @@ function init() {
   renderHome();
 }
 init();
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/Budget-Boutidy/sw.js').then(reg => {
+      reg.update(); // vérifie une mise à jour à chaque lancement
+    });
+  }
 </script>
 </body>
 </html>
