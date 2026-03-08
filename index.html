@@ -970,10 +970,14 @@ async function syncBank() {
   updateSyncIndicator('syncing');
   try {
     const r = await fetch(`${SUPABASE_URL}/functions/v1/sync-bank-eb`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync', charges_filters: buildChargesFilters() })
-    });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`
+  },
+  body: JSON.stringify({...})
+});
     if (r.ok) {
       const data = await r.json();
       if (data.error === 'no_session') {
