@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<meta name="theme-color" content="#0a0a0c">
+<title>Budget Boutidy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<!-- ── LOADING ─────────────────────────────────────────────── -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-logo">Budget 💰</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<!-- ── APP ────────────────────────────────────────────────── -->
+<div id="app">
+
+  <!-- ══ SCREEN HOME ══════════════════════════════════════ -->
+  <div class="screen active" id="screen-home">
+
+    <!-- Header -->
+    <div class="home-header">
+      <div>
+        <div class="greeting" id="greeting">Bonjour 👋</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+          <span class="sync-dot" id="sync-dot"></span>
+          <span style="font-size:10px;color:var(--text3)" id="sync-label">Sync...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="periode-nav">
+          <button class="periode-btn" onclick="prevPeriode()">‹</button>
+          <span class="periode-label" id="periode-label-home">—</span>
+          <button class="periode-btn" onclick="nextPeriode()">›</button>
+        </div>
+        <div class="user-avatar" id="user-avatar">G</div>
+      </div>
+    </div>
+
+    <!-- Alerte budget -->
+    <div class="alert-banner" id="alert-banner" style="display:none">
+      ⚠️ <span id="alert-text"></span>
+    </div>
+
+    <!-- Hero card : Reste à vivre -->
+    <div class="hero-card">
+      <div class="hero-top">
+        <div class="hero-label">RESTE À VIVRE</div>
+        <div class="badge badge-ok" id="hero-badge"><span class="dot"></span>OK</div>
+      </div>
+      <div class="hero-amount" id="hero-reste">—</div>
+      <div class="hero-sub" id="hero-sub">sur — de budget mensuel</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="hero-bar" style="width:0%"></div>
+      </div>
+      <div class="progress-meta">
+        <span id="hero-bar-left">0 € dépensés</span>
+        <span id="hero-bar-pct">0%</span>
+      </div>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Revenus</div>
+        <div class="kpi-value" id="kpi-revenus">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Charges fixes</div>
+        <div class="kpi-value" id="kpi-charges">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Dépensé</div>
+        <div class="kpi-value" id="kpi-depense">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Épargne/mois</div>
+        <div class="kpi-value" id="kpi-epargne">—</div>
+      </div>
+    </div>
+
+    <!-- Reste par jour -->
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="kpi-label">RESTE PAR JOUR</div>
+        <div class="kpi-value green" id="kpi-jour">—</div>
+        <div class="kpi-sub" id="kpi-jour-sub"></div>
+      </div>
+      <div style="font-size:32px">📅</div>
+    </div>
+
+    <!-- Dernières transactions -->
+    <div style="padding:0 20px 6px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3)">Récentes</span>
+      <button onclick="goTo('depenses')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer">Voir tout →</button>
+    </div>
+    <div id="home-tx-list"></div>
+
+  </div><!-- /screen-home -->
+
+  <!-- ══ SCREEN DÉPENSES ══════════════════════════════════ -->
+  <div class="screen" id="screen-depenses">
+
+    <div class="page-header">
+      <div>
+        <h1>Dépenses</h1>
+        <div class="sub" id="depenses-periode">—</div>
+      </div>
+      <div class="periode-nav">
+        <button class="periode-btn" onclick="prevPeriode()">‹</button>
+        <button class="periode-btn" onclick="nextPeriode()">›</button>
+      </div>
+    </div>
+
+    <!-- Gauge -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span class="card-label" style="margin:0" id="depenses-total">0 € dépensés</span>
+        <span style="font-size:12px;color:var(--text3)" id="gauge-nums"></span>
+      </div>
+      <div class="gauge-track">
+        <div class="gauge-fill" id="gauge-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Chips filtres -->
+    <div class="chips-row" id="filter-chips"></div>
+
+    <!-- Liste -->
+    <div id="depenses-list"></div>
+
+  </div><!-- /screen-depenses -->
+
+  <!-- ══ SCREEN ÉPARGNE ═══════════════════════════════════ -->
+  <div class="screen" id="screen-epargne">
+
+    <div class="page-header">
+      <div>
+        <h1>Épargne</h1>
+        <div class="sub">Patrimoine & objectifs</div>
+      </div>
+    </div>
+
+    <!-- Résumé total -->
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="kpi-label">TOTAL ÉPARGNÉ</div>
+        <div class="kpi-value green" id="epargne-total-solde">—</div>
+      </div>
+      <div style="text-align:right">
+        <div class="kpi-label">VERSEMENTS</div>
+        <div class="kpi-value" id="epargne-total-versement">—</div>
+      </div>
+    </div>
+
+    <!-- Comptes -->
+    <div id="epargne-comptes-list"></div>
+
+    <!-- Graphique répartition -->
+    <div class="card">
+      <div class="card-label">Répartition des dépenses</div>
+      <canvas id="pie-chart" style="width:100%;height:180px;display:block"></canvas>
+      <div id="pie-legend" style="margin-top:12px"></div>
+    </div>
+
+  </div><!-- /screen-epargne -->
+
+  <!-- ══ SCREEN RÉGLAGES ══════════════════════════════════ -->
+  <div class="screen" id="screen-reglages">
+
+    <div class="page-header">
+      <h1>Réglages</h1>
+    </div>
+
+    <!-- Utilisateur actif -->
+    <div class="card">
+      <div class="card-label">Utilisateur actif</div>
+      <div class="who-row">
+        <button class="who-btn g active" id="regl-user-g" onclick="switchUser('G')">👤 Geoffrey</button>
+        <button class="who-btn a" id="regl-user-a" onclick="switchUser('A')">👤 Amandine</button>
+      </div>
+    </div>
+
+    <!-- Thème -->
+    <div class="card">
+      <div class="setting-item" style="border:none;padding:0">
+        <div>
+          <div class="setting-label">Mode clair</div>
+          <div class="setting-sub">Thème de l'interface</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-theme" onchange="switchTheme(this.checked)">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Revenus -->
+    <div class="card">
+      <div class="card-label">Revenus mensuels</div>
+      <div class="setting-item">
+        <div><div class="setting-label">💼 Salaire Geoffrey</div></div>
+        <input type="number" class="input-field" style="width:110px;padding:8px;text-align:right"
+          id="input-salaire-g" onchange="saveRevenu('salaire_g', this.value)" placeholder="0">
+      </div>
+      <div class="setting-item">
+        <div><div class="setting-label">💼 Salaire Amandine</div></div>
+        <input type="number" class="input-field" style="width:110px;padding:8px;text-align:right"
+          id="input-salaire-a" onchange="saveRevenu('salaire_a', this.value)" placeholder="0">
+      </div>
+      <div class="setting-item">
+        <div><div class="setting-label">🏘️ Revenus fonciers</div></div>
+        <input type="number" class="input-field" style="width:110px;padding:8px;text-align:right"
+          id="input-foncier" onchange="saveRevenu('foncier', this.value)" placeholder="0">
+      </div>
+      <div class="setting-item" style="border:none">
+        <div><div class="setting-label">📊 Budget variable calculé</div><div class="setting-sub">Revenus − Charges − Épargne</div></div>
+        <div class="setting-value" id="budget-auto">—</div>
+      </div>
+    </div>
+
+    <!-- Charges fixes -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div class="card-label" style="margin:0">Charges fixes</div>
+          <div style="font-size:11px;color:var(--text3)">Total prévu : <span id="charges-total" style="color:var(--text2)">—</span></div>
+        </div>
+        <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="openAddCharge()">+ Ajouter</button>
+      </div>
+      <div id="charges-list"></div>
+    </div>
+
+    <!-- Épargne -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div class="card-label" style="margin:0">Comptes épargne</div>
+          <div style="font-size:11px;color:var(--text3)">Total versements : <span id="epargne-total-regl" style="color:var(--text2)">—</span></div>
+        </div>
+        <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="openAddEpargne()">+ Ajouter</button>
+      </div>
+      <div id="epargne-list"></div>
+    </div>
+
+    <!-- Catégories -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-label" style="margin:0">Catégories</div>
+        <button class="btn btn-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="openAddCategorie()">+ Ajouter</button>
+      </div>
+      <div id="categories-list" style="display:flex;flex-wrap:wrap"></div>
+    </div>
+
+    <div style="height:8px"></div>
+
+  </div><!-- /screen-reglages -->
+
+  <!-- ══ FAB ═══════════════════════════════════════════════ -->
+  <button class="fab" id="fab" onclick="openAddTx()">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- ══ BOTTOM NAV ════════════════════════════════════════ -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="goTo('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Accueil</span>
+    </button>
+    <button class="nav-btn" id="nav-depenses" onclick="goTo('depenses')">
+      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <span>Dépenses</span>
+    </button>
+    <button class="nav-btn" id="nav-epargne" onclick="goTo('epargne')">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 6v6l4 2"/></svg>
+      <span>Épargne</span>
+    </button>
+    <button class="nav-btn" id="nav-reglages" onclick="goTo('reglages')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Réglages</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ══ TOAST ══════════════════════════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══ MODALES ════════════════════════════════════════════ -->
+
+<!-- Modal : Ajouter une dépense -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nouvelle dépense</div>
+
+    <div class="keypad-display" id="keypad-display">0<span class="cursor">|</span><span style="font-size:24px;color:var(--text3)"> €</span></div>
+
+    <div class="keypad">
+      <button class="key" onclick="keyPress('1')">1</button>
+      <button class="key" onclick="keyPress('2')">2</button>
+      <button class="key" onclick="keyPress('3')">3</button>
+      <button class="key" onclick="keyPress('4')">4</button>
+      <button class="key" onclick="keyPress('5')">5</button>
+      <button class="key" onclick="keyPress('6')">6</button>
+      <button class="key" onclick="keyPress('7')">7</button>
+      <button class="key" onclick="keyPress('8')">8</button>
+      <button class="key" onclick="keyPress('9')">9</button>
+      <button class="key" onclick="keyPress('.')">.</button>
+      <button class="key zero" onclick="keyPress('0')">0</button>
+      <button class="key del" onclick="keyPress('del')">⌫</button>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Libellé (optionnel)</div>
+      <input type="text" class="input-field" id="add-label" placeholder="Ex: Lidl courses semaine">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Date</div>
+      <input type="date" class="input-field" id="add-date">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Catégorie</div>
+      <div class="cats-grid" id="add-cats-grid"></div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Qui</div>
+      <div class="who-row">
+        <button class="who-btn g active" id="add-who-g" onclick="selectAddWho('G')">👤 Geoffrey</button>
+        <button class="who-btn a" id="add-who-a" onclick="selectAddWho('A')">👤 Amandine</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="confirmAddTx()">Confirmer</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add')">Annuler</button>
+  </div>
+</div>
+
+<!-- Modal : Éditer une dépense -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Modifier la dépense</div>
+    <input type="hidden" id="edit-id">
+
+    <div class="input-group">
+      <div class="input-label">Montant (€)</div>
+      <input type="number" class="input-field" id="edit-montant" min="0" step="0.01">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Libellé</div>
+      <input type="text" class="input-field" id="edit-libelle">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Date</div>
+      <input type="date" class="input-field" id="edit-date">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Catégorie</div>
+      <div class="cats-grid" id="edit-cats-grid"></div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Qui</div>
+      <div class="who-row">
+        <button class="who-btn g active" id="edit-who-g" onclick="selectEditWho('G')">👤 Geoffrey</button>
+        <button class="who-btn a" id="edit-who-a" onclick="selectEditWho('A')">👤 Amandine</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="confirmEditTx()">Sauvegarder</button>
+    <button class="btn btn-danger" style="margin-top:8px" onclick="deleteEditTx()">🗑 Supprimer</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-edit')">Annuler</button>
+  </div>
+</div>
+
+<!-- Modal : Ajouter une charge fixe -->
+<div class="modal-overlay" id="modal-add-charge">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nouvelle charge fixe</div>
+    <div class="input-group">
+      <div class="input-label">Nom</div>
+      <input type="text" class="input-field" id="add-charge-nom" placeholder="Ex: Abonnement Netflix">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Montant prévu (€)</div>
+      <input type="number" class="input-field" id="add-charge-montant" min="0" step="0.01">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Emoji</div>
+      <input type="text" class="input-field" id="add-charge-emoji" placeholder="📌" maxlength="4">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Type</div>
+      <select class="input-field" id="add-charge-type">
+        <option>Logement</option><option>Véhicules</option><option>Assurances</option>
+        <option>Télécom</option><option>Loisirs</option><option>Enfants</option>
+        <option>Banque</option><option>Taxes</option><option selected>Autre</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="confirmAddCharge()">Ajouter</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-charge')">Annuler</button>
+  </div>
+</div>
+
+<!-- Modal : Ajouter un compte épargne -->
+<div class="modal-overlay" id="modal-add-epargne">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nouveau compte épargne</div>
+    <div class="input-group">
+      <div class="input-label">Nom</div>
+      <input type="text" class="input-field" id="add-epargne-nom" placeholder="Ex: Livret A">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Emoji</div>
+      <input type="text" class="input-field" id="add-epargne-emoji" placeholder="💰" maxlength="4">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Solde actuel (€)</div>
+      <input type="number" class="input-field" id="add-epargne-solde" min="0" step="0.01">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Versement mensuel (€)</div>
+      <input type="number" class="input-field" id="add-epargne-versement" min="0" step="0.01">
+    </div>
+    <button class="btn btn-primary" onclick="confirmAddEpargne()">Ajouter</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-epargne')">Annuler</button>
+  </div>
+</div>
+
+<!-- Modal : Ajouter une catégorie -->
+<div class="modal-overlay" id="modal-add-cat">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nouvelle catégorie</div>
+    <div class="input-group">
+      <div class="input-label">Emoji</div>
+      <input type="text" class="input-field" id="add-cat-emoji" placeholder="🎯" maxlength="4">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Nom</div>
+      <input type="text" class="input-field" id="add-cat-nom" placeholder="Ex: Sport">
+    </div>
+    <button class="btn btn-primary" onclick="confirmAddCategorie()">Ajouter</button>
+    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal('modal-add-cat')">Annuler</button>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
