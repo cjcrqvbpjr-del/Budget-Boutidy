@@ -1,5 +1,5 @@
 // ── ÉTAT GLOBAL (source de vérité = Supabase) ─────────────────
-import { dbSelect, dbInsert, dbUpdate, dbDelete, dbUpsert, subscribeRealtime } from './supabase.js';
+import { dbSelect, dbInsert, dbUpdate, dbDelete, dbUpsert, subscribeRealtime, startRealtimeConnection } from './supabase.js';
 import { getPeriodeCourante, periodeVoisine } from './budget.js';
 
 // State réactif — toutes les données viennent de Supabase
@@ -64,6 +64,7 @@ export async function loadTransactions(periode = state.periodeActive) {
 
 // ── REALTIME ──────────────────────────────────────────────────
 export function startRealtime() {
+  // Enregistrer les callbacks avant de démarrer la connexion
   subscribeRealtime('transactions', async ({ event, record, old }) => {
     if (record?.periode !== state.periodeActive && old?.periode !== state.periodeActive) return;
     if (event === 'INSERT') {
@@ -93,6 +94,9 @@ export function startRealtime() {
     state.comptesEpargne = await dbSelect('comptes_epargne', 'order=created_at.asc');
     notify();
   });
+
+  // Démarrer UNE SEULE connexion WebSocket pour tout
+  startRealtimeConnection();
 }
 
 // ── ACTIONS TRANSACTIONS ──────────────────────────────────────

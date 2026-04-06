@@ -23,6 +23,13 @@ export function renderHome() {
   // Sync dot
   const dot = qs('#sync-dot');
   dot.className = 'sync-dot ' + state.syncStatus;
+  const syncLabel = qs('#sync-label');
+  if (syncLabel) {
+    syncLabel.textContent = state.syncStatus === 'ok' ? 'Synchronisé'
+      : state.syncStatus === 'syncing' ? 'Sync...'
+      : state.syncStatus === 'error' ? 'Hors ligne'
+      : '';
+  }
 
   // Hero — Reste à vivre
   const heroEl = qs('#hero-reste');

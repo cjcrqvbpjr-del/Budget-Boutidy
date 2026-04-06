@@ -55,18 +55,22 @@ export async function dbUpsert(table, data, onConflict) {
 }
 
 // ── REALTIME ──────────────────────────────────────────────────
-// Connexion WebSocket Supabase Realtime
 let realtimeWs = null;
 let heartbeatTimer = null;
+let realtimeStarted = false;
 const subscribers = {};
 
+// Enregistre un callback pour une table — la connexion WS est unique
 export function subscribeRealtime(table, callback) {
   if (!subscribers[table]) subscribers[table] = [];
   subscribers[table].push(callback);
+}
 
-  if (!realtimeWs || realtimeWs.readyState !== WebSocket.OPEN) {
-    connectRealtime();
-  }
+// Démarre UNE SEULE connexion WebSocket pour toutes les tables
+export function startRealtimeConnection() {
+  if (realtimeStarted) return;
+  realtimeStarted = true;
+  connectRealtime();
 }
 
 function connectRealtime() {
@@ -75,7 +79,7 @@ function connectRealtime() {
 
   realtimeWs.onopen = () => {
     console.log('[Realtime] Connecté');
-    // S'abonner à toutes les tables
+    // S'abonner à toutes les tables en une seule connexion
     const tables = ['transactions', 'parametres', 'charges_fixes', 'comptes_epargne', 'categories'];
     tables.forEach(table => {
       realtimeWs.send(JSON.stringify({
@@ -85,8 +89,8 @@ function connectRealtime() {
         ref: null,
       }));
     });
-
     // Heartbeat toutes les 25s
+    clearInterval(heartbeatTimer);
     heartbeatTimer = setInterval(() => {
       if (realtimeWs.readyState === WebSocket.OPEN) {
         realtimeWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: null }));
@@ -99,17 +103,20 @@ function connectRealtime() {
       const msg = JSON.parse(evt.data);
       if (msg.event === 'INSERT' || msg.event === 'UPDATE' || msg.event === 'DELETE') {
         const table = msg.topic.replace('realtime:public:', '');
-        const callbacks = subscribers[table] || [];
-        callbacks.forEach(cb => cb({ event: msg.event, record: msg.payload.record, old: msg.payload.old_record }));
+        (subscribers[table] || []).forEach(cb => cb({
+          event: msg.event,
+          record: msg.payload?.record,
+          old: msg.payload?.old_record,
+        }));
       }
     } catch {}
   };
 
   realtimeWs.onclose = () => {
-    console.log('[Realtime] Déconnecté — reconnexion dans 3s');
+    console.log('[Realtime] Déconnecté — reconnexion dans 5s');
     clearInterval(heartbeatTimer);
-    setTimeout(connectRealtime, 3000);
+    setTimeout(connectRealtime, 5000);
   };
 
-  realtimeWs.onerror = (e) => console.error('[Realtime] Erreur', e);
+  realtimeWs.onerror = () => {}; // silencieux, onclose gère
 }
