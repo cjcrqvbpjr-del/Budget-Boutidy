@@ -54,6 +54,19 @@ export function labelPeriode(periode) {
   return `${debut.getDate()} ${MOIS_FR[debut.getMonth()]} → ${fin.getDate()} ${MOIS_FR[fin.getMonth()]} ${fin.getFullYear()}`;
 }
 
+// Détecte les revenus exceptionnels (non-salaires) dans une liste de transactions
+// Un revenu est "salaire" s'il est dans ±25% du salaire configuré
+function extraRevenus(transactions, salaireG, salaireA) {
+  return transactions
+    .filter(t => t.type === 'revenu')
+    .reduce((s, t) => {
+      const m = Math.abs(Number(t.montant));
+      const diffG = salaireG > 0 ? Math.abs(m - salaireG) / salaireG : Infinity;
+      const diffA = salaireA > 0 ? Math.abs(m - salaireA) / salaireA : Infinity;
+      return (diffG <= 0.25 || diffA <= 0.25) ? s : s + m;
+    }, 0);
+}
+
 // Calcule le report (solde) d'une période passée
 // Formule : salaires configurés − charges fixes configurées − épargne − dépenses variables réelles
 // On utilise les paramètres configurés pour les revenus et charges (stables, pas pollués par
@@ -62,7 +75,8 @@ export function calculerReport(prevTransactions, parametres, chargesFixes, compt
   const salaireG = Number(parametres.salaire_g || 0);
   const salaireA = Number(parametres.salaire_a || 0);
   const foncier  = Number(parametres.foncier   || 0);
-  const revenus  = salaireG + salaireA + foncier;
+  const extra    = extraRevenus(prevTransactions, salaireG, salaireA);
+  const revenus  = salaireG + salaireA + foncier + extra;
 
   // Charges fixes : utilise montant_reel si disponible, sinon montant_prevu
   const totalChargesFixes = chargesFixes
@@ -86,7 +100,8 @@ export function calculerBilan(transactions, parametres, chargesFixes, comptesEpa
   const salaireG   = Number(parametres.salaire_g   || 0);
   const salaireA   = Number(parametres.salaire_a   || 0);
   const foncier    = Number(parametres.foncier      || 0);
-  const revenus    = salaireG + salaireA + foncier;
+  const extra      = extraRevenus(transactions, salaireG, salaireA);
+  const revenus    = salaireG + salaireA + foncier + extra;
 
   // Charges fixes : utilise montant_reel si disponible (import bancaire), sinon montant_prevu
   const totalChargesFixes = chargesFixes
@@ -107,8 +122,8 @@ export function calculerBilan(transactions, parametres, chargesFixes, comptesEpa
 
   const reste = budgetVariable - depenses;
 
-  // Pourcentage basé sur le budget positif uniquement
-  const budgetRef = Math.max(1, revenus - totalChargesFixes - totalEpargne);
+  // Pourcentage basé sur le budget positif uniquement (sans report, mais avec extras)
+  const budgetRef = Math.max(1, salaireG + salaireA + foncier + extra - totalChargesFixes - totalEpargne);
   const pct = Math.min(100, Math.round(depenses / budgetRef * 100));
 
   // Reste par jour jusqu'à la fin de période
