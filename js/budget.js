@@ -61,18 +61,19 @@ export function calculerBilan(transactions, parametres, chargesFixes, comptesEpa
   const foncier    = Number(parametres.foncier      || 0);
   const revenus    = salaireG + salaireA + foncier;
 
-  const totalChargesPrevues = chargesFixes
+  // Charges fixes : utilise montant_reel si disponible (import bancaire), sinon montant_prevu
+  const totalChargesFixes = chargesFixes
     .filter(c => c.actif)
-    .reduce((s, c) => s + Number(c.montant_prevu || 0), 0);
+    .reduce((s, c) => s + Math.abs(Number(c.montant_reel ?? c.montant_prevu ?? 0)), 0);
 
   const totalEpargne = comptesEpargne
     .reduce((s, c) => s + Number(c.versement_mensuel || 0), 0);
 
-  const budgetVariable = Math.max(0, revenus - totalChargesPrevues - totalEpargne);
+  const budgetVariable = Math.max(0, revenus - totalChargesFixes - totalEpargne);
 
-  // Dépenses réelles de la période (hors revenus)
+  // Dépenses variables uniquement (charge_fixe déjà dans totalChargesFixes)
   const depenses = transactions
-    .filter(t => t.type === 'depense' || t.type === 'charge_fixe')
+    .filter(t => t.type === 'depense')
     .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
 
   const reste = budgetVariable - depenses;
@@ -91,7 +92,7 @@ export function calculerBilan(transactions, parametres, chargesFixes, comptesEpa
     salaireG,
     salaireA,
     foncier,
-    totalChargesPrevues,
+    totalChargesFixes,
     totalEpargne,
     budgetVariable,
     depenses,

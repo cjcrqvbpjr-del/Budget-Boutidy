@@ -87,6 +87,13 @@ Deno.serve(async (req) => {
     const cfRes = await fetch(`${SUPABASE_URL}/rest/v1/charges_fixes?actif=eq.true`, { headers: sbHeaders() });
     const chargesFixes = cfRes.ok ? await cfRes.json() : [];
 
+    const pmRes = await fetch(`${SUPABASE_URL}/rest/v1/parametres`, { headers: sbHeaders() });
+    const pmRows = pmRes.ok ? await pmRes.json() : [];
+    const parametres: any = {};
+    for (const row of pmRows) { try { parametres[row.cle] = JSON.parse(row.valeur); } catch { parametres[row.cle] = row.valeur; } }
+    const salaireG = Number(parametres?.salaire_g || 0);
+    const salaireA = Number(parametres?.salaire_a || 0);
+
     let importees = 0, doublons = 0, reconciliees = 0;
 
     for (const account of accounts) {
@@ -127,6 +134,21 @@ Deno.serve(async (req) => {
               reconciliees++;
               break;
             }
+          }
+        }
+
+        // Détection salaire (revenus) : ±25% du salaire prévu → mise à jour paramètres
+        if (montant > 0) {
+          if (salaireG > 0 && Math.abs(montant - salaireG) / salaireG <= 0.25) {
+            await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.salaire_g`, {
+              method: 'PATCH', headers: sbHeaders(),
+              body: JSON.stringify({ valeur: JSON.stringify(montant) }),
+            });
+          } else if (salaireA > 0 && Math.abs(montant - salaireA) / salaireA <= 0.25) {
+            await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.salaire_a`, {
+              method: 'PATCH', headers: sbHeaders(),
+              body: JSON.stringify({ valeur: JSON.stringify(montant) }),
+            });
           }
         }
 

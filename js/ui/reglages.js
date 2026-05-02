@@ -37,7 +37,7 @@ export function renderReglages() {
 function renderChargesList() {
   const el = qs('#charges-list');
   const bilan = calculerBilan([], state.parametres, state.chargesFixes, state.comptesEpargne);
-  qs('#charges-total').textContent = fmtCourt(bilan.totalChargesPrevues);
+  qs('#charges-total').textContent = fmtCourt(bilan.totalChargesFixes);
 
   el.innerHTML = state.chargesFixes.map(c => `
     <div class="setting-item">

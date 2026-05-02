@@ -74,7 +74,7 @@ export function renderHome() {
 
   // KPIs
   qs('#kpi-revenus').textContent   = fmtCourt(bilan.revenus);
-  qs('#kpi-charges').textContent   = fmtCourt(bilan.totalChargesPrevues);
+  qs('#kpi-charges').textContent   = fmtCourt(bilan.totalChargesFixes);
   qs('#kpi-depense').textContent   = fmtCourt(bilan.depenses);
   qs('#kpi-epargne').textContent   = fmtCourt(bilan.totalEpargne);
 

@@ -63,8 +63,15 @@ function detectCategorie(libelle: string): string {
   return '📌';
 }
 
-async function importTransactions(transactions: Array<{date: string, montant: number, libelle: string}>, chargesFixes: any[]) {
+async function importTransactions(
+  transactions: Array<{date: string, montant: number, libelle: string}>,
+  chargesFixes: any[],
+  parametres: any
+) {
   let importees = 0, doublons = 0, reconciliees = 0;
+
+  const salaireG = Number(parametres?.salaire_g || 0);
+  const salaireA = Number(parametres?.salaire_a || 0);
 
   for (const tx of transactions) {
     const hash = makeHash(tx.date, tx.montant, tx.libelle);
@@ -74,7 +81,7 @@ async function importTransactions(transactions: Array<{date: string, montant: nu
     const existR = await fetch(`${SUPABASE_URL}/rest/v1/transactions?hash_doublon=eq.${hash}&limit=1`, { headers: sbHeaders() });
     if ((await existR.json()).length > 0) { doublons++; continue; }
 
-    // 2. Réconciliation charge fixe ?
+    // 2. Réconciliation charge fixe (dépenses) ?
     let chargeFixeId = null;
     if (tx.montant < 0) {
       for (const charge of chargesFixes) {
@@ -94,7 +101,24 @@ async function importTransactions(transactions: Array<{date: string, montant: nu
       }
     }
 
-    // 3. Insérer
+    // 3. Détection salaire (revenus) : ±25% du salaire prévu → mise à jour paramètres
+    if (tx.montant > 0) {
+      if (salaireG > 0 && Math.abs(tx.montant - salaireG) / salaireG <= 0.25) {
+        await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.salaire_g`, {
+          method: 'PATCH', headers: sbHeaders(),
+          body: JSON.stringify({ valeur: JSON.stringify(tx.montant) }),
+        });
+        console.log(`[EB] salaire_g mis à jour: ${tx.montant}`);
+      } else if (salaireA > 0 && Math.abs(tx.montant - salaireA) / salaireA <= 0.25) {
+        await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.salaire_a`, {
+          method: 'PATCH', headers: sbHeaders(),
+          body: JSON.stringify({ valeur: JSON.stringify(tx.montant) }),
+        });
+        console.log(`[EB] salaire_a mis à jour: ${tx.montant}`);
+      }
+    }
+
+    // 4. Insérer
     await fetch(`${SUPABASE_URL}/rest/v1/transactions`, {
       method: 'POST',
       headers: { ...sbHeaders(), 'Prefer': 'return=minimal' },
@@ -146,9 +170,14 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ cle: 'eb_session_id', valeur: JSON.stringify(sessionId) }),
     });
 
-    // 3. Charges fixes pour déduplication
+    // 3. Charges fixes + paramètres salaires pour réconciliation
     const cfRes = await fetch(`${SUPABASE_URL}/rest/v1/charges_fixes?actif=eq.true`, { headers: sbHeaders() });
     const chargesFixes = cfRes.ok ? await cfRes.json() : [];
+
+    const pmRes = await fetch(`${SUPABASE_URL}/rest/v1/parametres`, { headers: sbHeaders() });
+    const pmRows = pmRes.ok ? await pmRes.json() : [];
+    const parametres: any = {};
+    for (const row of pmRows) { try { parametres[row.cle] = JSON.parse(row.valeur); } catch { parametres[row.cle] = row.valeur; } }
 
     // 4. Transactions des 90 derniers jours
     const dateFin   = new Date().toISOString().split('T')[0];
@@ -179,7 +208,7 @@ Deno.serve(async (req) => {
         })
         .filter((t: any) => t.date && !isNaN(t.montant));
 
-      const r = await importTransactions(transactions, chargesFixes);
+      const r = await importTransactions(transactions, chargesFixes, parametres);
       totalImportees    += r.importees;
       totalDoublons     += r.doublons;
       totalReconciliees += r.reconciliees;
