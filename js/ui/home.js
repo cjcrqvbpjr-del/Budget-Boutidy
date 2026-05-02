@@ -1,13 +1,20 @@
 // ── ÉCRAN HOME ────────────────────────────────────────────────
 import { state, changerPeriode } from '../state.js';
-import { calculerBilan, fmt, fmtCourt, fmtDate, labelPeriode } from '../budget.js';
+import { calculerBilan, calculerReport, fmt, fmtCourt, fmtDate, labelPeriode } from '../budget.js';
 
 export function renderHome() {
+  const report = calculerReport(
+    state.transactionsPrev,
+    state.parametres,
+    state.chargesFixes,
+    state.comptesEpargne,
+  );
   const bilan = calculerBilan(
     state.transactions,
     state.parametres,
     state.chargesFixes,
     state.comptesEpargne,
+    report,
   );
 
   // Greeting
@@ -52,6 +59,17 @@ export function renderHome() {
 
   // Sub text
   qs('#hero-sub').textContent = `sur ${fmtCourt(bilan.budgetVariable)} de budget mensuel`;
+
+  // Report du mois précédent
+  const reportEl = qs('#hero-report');
+  if (bilan.report !== 0) {
+    reportEl.style.display = 'block';
+    const sign = bilan.report > 0 ? '+' : '';
+    reportEl.textContent = `Report mois précédent : ${sign}${fmtCourt(bilan.report)}`;
+    reportEl.style.color = bilan.report >= 0 ? 'var(--green, #4ade80)' : 'var(--red, #f87171)';
+  } else {
+    reportEl.style.display = 'none';
+  }
 
   // Progress bar
   const fill = qs('#hero-bar');

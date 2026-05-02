@@ -14,11 +14,23 @@ const PRIVATE_KEY  = Deno.env.get('ENABLEBANKING_PRIVATE_KEY')!;
 const SUPABASE_URL = 'https://qvyxdpplabsbvjvpoubf.supabase.co';
 const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+function normalizePem(pem: string): string {
+  let s = pem.replace(/\\n/g, '\n').trim();
+  if (s.includes('-----BEGIN') && s.includes('\n')) return s;
+  const match = s.match(/-----BEGIN ([^-]+)-----/);
+  if (!match) return s;
+  const type = match[1];
+  const b64 = s.replace(/-----[^-]+-----/g, '').replace(/\s/g, '');
+  const lines = (b64.match(/.{1,64}/g) || []).join('\n');
+  return `-----BEGIN ${type}-----\n${lines}\n-----END ${type}-----`;
+}
+
 function makeJWT(): string {
   const now = Math.floor(Date.now() / 1000);
+  const privateKey = normalizePem(PRIVATE_KEY);
   return jwt.sign(
     { iss: 'enablebanking.com', aud: 'api.enablebanking.com', iat: now, exp: now + 3600 },
-    PRIVATE_KEY,
+    privateKey,
     { algorithm: 'RS256', header: { kid: APP_ID, typ: 'JWT' } }
   );
 }

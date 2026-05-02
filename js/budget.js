@@ -54,8 +54,48 @@ export function labelPeriode(periode) {
   return `${debut.getDate()} ${MOIS_FR[debut.getMonth()]} → ${fin.getDate()} ${MOIS_FR[fin.getMonth()]} ${fin.getFullYear()}`;
 }
 
+// Calcule le report (solde) d'une période passée à partir de ses transactions
+// Logique : revenus réels − charges fixes réelles − épargne − dépenses variables
+// Si pas de données bancaires → utilise les paramètres configurés
+export function calculerReport(prevTransactions, parametres, chargesFixes, comptesEpargne) {
+  // Revenus réels de la période (imports bancaires type 'revenu')
+  const revenusTx = prevTransactions
+    .filter(t => t.type === 'revenu')
+    .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
+
+  // Charges fixes réellement débitées (imports bancaires type 'charge_fixe')
+  const chargesPayees = prevTransactions
+    .filter(t => t.type === 'charge_fixe')
+    .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
+
+  // Dépenses variables de la période
+  const depensesPrev = prevTransactions
+    .filter(t => t.type === 'depense')
+    .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
+
+  // Fallback paramètres si pas de données bancaires
+  const salaireG = Number(parametres.salaire_g || 0);
+  const salaireA = Number(parametres.salaire_a || 0);
+  const foncier  = Number(parametres.foncier   || 0);
+  const revenusCfg = salaireG + salaireA + foncier;
+
+  const chargesCfg = chargesFixes
+    .filter(c => c.actif)
+    .reduce((s, c) => s + Math.abs(Number(c.montant_prevu || 0)), 0);
+
+  const epargne = comptesEpargne
+    .reduce((s, c) => s + Number(c.versement_mensuel || 0), 0);
+
+  // Utilise les vraies transactions si disponibles, sinon les paramètres
+  const revenus = revenusTx > 0 ? revenusTx : revenusCfg;
+  const charges = chargesPayees > 0 ? chargesPayees : chargesCfg;
+
+  return revenus - charges - epargne - depensesPrev;
+}
+
 // Calcule le bilan budgétaire à partir des données
-export function calculerBilan(transactions, parametres, chargesFixes, comptesEpargne) {
+// report : solde reporté de la période précédente (peut être négatif)
+export function calculerBilan(transactions, parametres, chargesFixes, comptesEpargne, report = 0) {
   const salaireG   = Number(parametres.salaire_g   || 0);
   const salaireA   = Number(parametres.salaire_a   || 0);
   const foncier    = Number(parametres.foncier      || 0);
@@ -69,7 +109,9 @@ export function calculerBilan(transactions, parametres, chargesFixes, comptesEpa
   const totalEpargne = comptesEpargne
     .reduce((s, c) => s + Number(c.versement_mensuel || 0), 0);
 
-  const budgetVariable = Math.max(0, revenus - totalChargesFixes - totalEpargne);
+  // Budget = report du mois précédent + revenus − charges − épargne
+  const budgetBrut    = report + revenus - totalChargesFixes - totalEpargne;
+  const budgetVariable = budgetBrut; // Peut être négatif si report très négatif
 
   // Dépenses variables uniquement (charge_fixe déjà dans totalChargesFixes)
   const depenses = transactions
@@ -77,7 +119,10 @@ export function calculerBilan(transactions, parametres, chargesFixes, comptesEpa
     .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
 
   const reste = budgetVariable - depenses;
-  const pct   = budgetVariable > 0 ? Math.min(100, Math.round(depenses / budgetVariable * 100)) : 100;
+
+  // Pourcentage basé sur le budget positif uniquement
+  const budgetRef = Math.max(1, revenus - totalChargesFixes - totalEpargne);
+  const pct = Math.min(100, Math.round(depenses / budgetRef * 100));
 
   // Reste par jour jusqu'à la fin de période
   const today = new Date();
@@ -92,6 +137,7 @@ export function calculerBilan(transactions, parametres, chargesFixes, comptesEpa
     salaireG,
     salaireA,
     foncier,
+    report,
     totalChargesFixes,
     totalEpargne,
     budgetVariable,

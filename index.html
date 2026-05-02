@@ -58,6 +58,7 @@
       </div>
       <div class="hero-amount" id="hero-reste">—</div>
       <div class="hero-sub" id="hero-sub">sur — de budget mensuel</div>
+      <div class="hero-report" id="hero-report" style="display:none"></div>
       <div class="progress-track">
         <div class="progress-fill" id="hero-bar" style="width:0%"></div>
       </div>
@@ -208,12 +209,12 @@
     <div class="card">
       <div class="card-label">Revenus mensuels</div>
       <div class="setting-item">
-        <div><div class="setting-label">💼 Salaire Geoffrey</div></div>
+        <div><div class="setting-label">💼 Salaire Geoffrey</div><div class="setting-sub" id="salaire-g-sub"></div></div>
         <input type="number" class="input-field" style="width:110px;padding:8px;text-align:right"
           id="input-salaire-g" onchange="saveRevenu('salaire_g', this.value)" placeholder="0">
       </div>
       <div class="setting-item">
-        <div><div class="setting-label">💼 Salaire Amandine</div></div>
+        <div><div class="setting-label">💼 Salaire Amandine</div><div class="setting-sub" id="salaire-a-sub"></div></div>
         <input type="number" class="input-field" style="width:110px;padding:8px;text-align:right"
           id="input-salaire-a" onchange="saveRevenu('salaire_a', this.value)" placeholder="0">
       </div>

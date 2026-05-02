@@ -2,7 +2,7 @@
 import { state, sauvegarderParametre, modifierCharge, supprimerCharge, ajouterCharge,
          modifierCompteEpargne, supprimerCompteEpargne, ajouterCompteEpargne,
          ajouterCategorie, supprimerCategorie, setActiveUser, setTheme } from '../state.js';
-import { calculerBilan, fmt, fmtCourt } from '../budget.js';
+import { calculerBilan, calculerReport, fmt, fmtCourt } from '../budget.js';
 
 export function renderReglages() {
   // Statut banque
@@ -15,13 +15,38 @@ export function renderReglages() {
   // Thème
   qs('#toggle-theme').checked = state.theme === 'light';
 
-  // Revenus
+  // Revenus — afficher le salaire configuré + le vrai virement reçu ce mois
   qs('#input-salaire-g').value = state.parametres.salaire_g || '';
   qs('#input-salaire-a').value = state.parametres.salaire_a || '';
   qs('#input-foncier').value   = state.parametres.foncier   || '';
 
-  // Budget calculé
-  const bilan = calculerBilan(state.transactions, state.parametres, state.chargesFixes, state.comptesEpargne);
+  // Virements salaires réellement reçus dans la période courante
+  const revenusTx = state.transactions.filter(t => t.type === 'revenu');
+  const salaireGCfg = Number(state.parametres.salaire_g || 0);
+  const salaireACfg = Number(state.parametres.salaire_a || 0);
+
+  // Associer chaque virement au salaire le plus proche
+  let recuG = 0, recuA = 0;
+  for (const t of revenusTx) {
+    const m = Math.abs(Number(t.montant));
+    const diffG = salaireGCfg > 0 ? Math.abs(m - salaireGCfg) / salaireGCfg : Infinity;
+    const diffA = salaireACfg > 0 ? Math.abs(m - salaireACfg) / salaireACfg : Infinity;
+    if (diffG <= diffA && diffG <= 0.25) recuG += m;
+    else if (diffA < diffG && diffA <= 0.25) recuA += m;
+  }
+
+  const subG = qs('#salaire-g-sub');
+  const subA = qs('#salaire-a-sub');
+  if (subG) subG.innerHTML = recuG > 0
+    ? `<span style="color:var(--accent)">✓ Reçu ce mois : ${fmtCourt(recuG)}</span>`
+    : '<span style="color:var(--text3)">En attente…</span>';
+  if (subA) subA.innerHTML = recuA > 0
+    ? `<span style="color:var(--accent)">✓ Reçu ce mois : ${fmtCourt(recuA)}</span>`
+    : '<span style="color:var(--text3)">En attente…</span>';
+
+  // Budget calculé (avec report)
+  const report = calculerReport(state.transactionsPrev, state.parametres, state.chargesFixes, state.comptesEpargne);
+  const bilan = calculerBilan(state.transactions, state.parametres, state.chargesFixes, state.comptesEpargne, report);
   qs('#budget-auto').textContent = fmt(bilan.budgetVariable);
 
   // Charges fixes
@@ -39,23 +64,29 @@ function renderChargesList() {
   const bilan = calculerBilan([], state.parametres, state.chargesFixes, state.comptesEpargne);
   qs('#charges-total').textContent = fmtCourt(bilan.totalChargesFixes);
 
-  el.innerHTML = state.chargesFixes.map(c => `
+  el.innerHTML = state.chargesFixes.map(c => {
+    const reel = c.montant_reel != null ? Math.abs(Number(c.montant_reel)) : null;
+    const prevu = Math.abs(Number(c.montant_prevu || 0));
+    const hasReel = reel != null && reel !== prevu;
+    return `
     <div class="setting-item">
       <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
         <span style="font-size:18px">${c.emoji}</span>
         <div style="min-width:0">
           <div class="setting-label">${c.nom}</div>
-          <div class="setting-sub">${c.type}</div>
+          <div class="setting-sub">${c.type}${hasReel ? ` · <span style="color:var(--accent)">réel : ${reel.toFixed(2)} €</span>` : ''}</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <input type="number" value="${c.montant_prevu}" min="0" step="1"
+        <input type="number" value="${prevu}" min="0" step="1"
           class="input-field" style="width:90px;padding:8px;text-align:right"
+          title="Montant prévu"
           onchange="updateCharge('${c.id}', this.value)">
         <button onclick="deleteCharge('${c.id}')"
           style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px">🗑</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderEpargneList() {

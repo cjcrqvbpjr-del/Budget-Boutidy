@@ -5,11 +5,12 @@ import { getPeriodeCourante, periodeVoisine } from './budget.js';
 // State réactif — toutes les données viennent de Supabase
 export const state = {
   // Données partagées (depuis Supabase)
-  transactions:   [],
-  parametres:     {},
-  chargesFixes:   [],
-  comptesEpargne: [],
-  categories:     [],
+  transactions:     [],
+  transactionsPrev: [],   // Période précédente → calcul du report
+  parametres:       {},
+  chargesFixes:     [],
+  comptesEpargne:   [],
+  categories:       [],
 
   // Préférences locales (localStorage)
   activeUser:   localStorage.getItem('bb_user')  || 'G',
@@ -34,20 +35,23 @@ export async function loadAll() {
   state.syncStatus = 'syncing';
   notify();
   try {
-    const [tx, params, charges, epargne, cats] = await Promise.all([
+    const periodePrev = periodeVoisine(state.periodeActive, -1);
+    const [tx, txPrev, params, charges, epargne, cats] = await Promise.all([
       dbSelect('transactions', `periode=eq.${state.periodeActive}&order=date.desc`),
+      dbSelect('transactions', `periode=eq.${periodePrev}&order=date.desc`),
       dbSelect('parametres'),
       dbSelect('charges_fixes', 'actif=eq.true&order=ordre.asc'),
       dbSelect('comptes_epargne', 'order=created_at.asc'),
       dbSelect('categories', 'order=ordre.asc'),
     ]);
 
-    state.transactions   = tx;
-    state.parametres     = Object.fromEntries(params.map(p => [p.cle, JSON.parse(p.valeur)]));
-    state.chargesFixes   = charges;
-    state.comptesEpargne = epargne;
-    state.categories     = cats;
-    state.syncStatus     = 'ok';
+    state.transactions     = tx;
+    state.transactionsPrev = txPrev;
+    state.parametres       = Object.fromEntries(params.map(p => [p.cle, JSON.parse(p.valeur)]));
+    state.chargesFixes     = charges;
+    state.comptesEpargne   = epargne;
+    state.categories       = cats;
+    state.syncStatus       = 'ok';
   } catch (e) {
     console.error('[State] Erreur chargement:', e);
     state.syncStatus = 'error';
@@ -55,10 +59,15 @@ export async function loadAll() {
   notify();
 }
 
-// Charge uniquement les transactions d'une période
+// Charge les transactions d'une période (+ la précédente pour le report)
 export async function loadTransactions(periode = state.periodeActive) {
-  const tx = await dbSelect('transactions', `periode=eq.${periode}&order=date.desc`);
-  state.transactions = tx;
+  const periodePrev = periodeVoisine(periode, -1);
+  const [tx, txPrev] = await Promise.all([
+    dbSelect('transactions', `periode=eq.${periode}&order=date.desc`),
+    dbSelect('transactions', `periode=eq.${periodePrev}&order=date.desc`),
+  ]);
+  state.transactions     = tx;
+  state.transactionsPrev = txPrev;
   notify();
 }
 
