@@ -219,7 +219,7 @@ window.closeModal = window.closeModal;
 // ── ENABLE BANKING ────────────────────────────────────────────
 window.connectBank = async function() {
   try {
-    const r = await fetch('/api/enable-banking/start');
+    const r = await fetch('https://qvyxdpplabsbvjvpoubf.supabase.co/functions/v1/enable-banking-start');
     const data = await r.json();
     if (data.url) {
       window.location.href = data.url;
@@ -235,7 +235,7 @@ window.syncBank = async function() {
   const btn = document.getElementById('bank-sync-btn');
   if (btn) btn.textContent = '⏳ Sync en cours...';
   try {
-    const r = await fetch('/api/enable-banking/sync');
+    const r = await fetch('https://qvyxdpplabsbvjvpoubf.supabase.co/functions/v1/enable-banking-sync');
     const data = await r.json();
     if (data.ok) {
       showToast(`✓ ${data.importees} transaction(s) importée(s), ${data.doublons} doublon(s)`, 3500);
