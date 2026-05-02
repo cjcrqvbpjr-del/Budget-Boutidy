@@ -2,7 +2,7 @@
 import { state, sauvegarderParametre, modifierCharge, supprimerCharge, ajouterCharge,
          modifierCompteEpargne, supprimerCompteEpargne, ajouterCompteEpargne,
          ajouterCategorie, supprimerCategorie, setActiveUser, setTheme } from '../state.js';
-import { calculerBilan, fmt, fmtCourt } from '../budget.js';
+import { calculerBilan, calculerReport, fmt, fmtCourt } from '../budget.js';
 
 export function renderReglages() {
   // Statut banque
@@ -44,8 +44,11 @@ export function renderReglages() {
     ? `<span style="color:var(--accent)">✓ Reçu ce mois : ${fmtCourt(recuA)}</span>`
     : '<span style="color:var(--text3)">En attente…</span>';
 
-  // Budget calculé
-  const bilan = calculerBilan(state.transactions, state.parametres, state.chargesFixes, state.comptesEpargne);
+  // Budget calculé (avec report si configuré)
+  const report = 'report_manuel' in state.parametres
+    ? Number(state.parametres.report_manuel)
+    : calculerReport(state.transactionsPrev, state.parametres, state.chargesFixes, state.comptesEpargne);
+  const bilan = calculerBilan(state.transactions, state.parametres, state.chargesFixes, state.comptesEpargne, report);
   qs('#budget-auto').textContent = fmt(bilan.budgetVariable);
 
   // Charges fixes

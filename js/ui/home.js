@@ -1,13 +1,20 @@
 // ── ÉCRAN HOME ────────────────────────────────────────────────
 import { state, changerPeriode } from '../state.js';
-import { calculerBilan, fmt, fmtCourt, fmtDate, labelPeriode } from '../budget.js';
+import { calculerBilan, calculerReport, fmt, fmtCourt, fmtDate, labelPeriode } from '../budget.js';
 
 export function renderHome() {
+  // report_manuel dans parametres = override ponctuel (ex: 0 pour repartir à zéro ce mois)
+  // Si absent → calcul automatique depuis les transactions du mois précédent
+  const report = 'report_manuel' in state.parametres
+    ? Number(state.parametres.report_manuel)
+    : calculerReport(state.transactionsPrev, state.parametres, state.chargesFixes, state.comptesEpargne);
+
   const bilan = calculerBilan(
     state.transactions,
     state.parametres,
     state.chargesFixes,
     state.comptesEpargne,
+    report,
   );
 
   // Greeting
