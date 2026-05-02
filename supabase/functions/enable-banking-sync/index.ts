@@ -101,7 +101,8 @@ Deno.serve(async (req) => {
       for (const t of (txData.transactions || [])) {
         const date    = t.booking_date || t.value_date;
         const libelle = t.remittance_information?.[0] || t.creditor_name || t.debtor_name || '';
-        const montant = Number(t.transaction_amount?.amount);
+        const amount  = Number(t.transaction_amount?.amount);
+        const montant = t.credit_debit_indicator === 'DBIT' ? -Math.abs(amount) : Math.abs(amount);
         if (!date || isNaN(montant)) continue;
 
         const hash = makeHash(date, montant, libelle);

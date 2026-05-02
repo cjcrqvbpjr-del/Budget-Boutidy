@@ -167,11 +167,16 @@ Deno.serve(async (req) => {
       const txData = await txRes.json();
       console.log('[EB] transactions pour', accountId, ':', txData.transactions?.length, 'statut fetch:', txRes.status);
       const transactions = (txData.transactions || [])
-        .map((t: any) => ({
-          date: t.booking_date || t.value_date,
-          libelle: t.remittance_information?.[0] || t.creditor_name || t.debtor_name || '',
-          montant: Number(t.transaction_amount?.amount),
-        }))
+        .map((t: any) => {
+          const amount = Number(t.transaction_amount?.amount);
+          const indicator = t.credit_debit_indicator;
+          const montant = indicator === 'DBIT' ? -Math.abs(amount) : Math.abs(amount);
+          return {
+            date: t.booking_date || t.value_date,
+            libelle: t.remittance_information?.[0] || t.creditor_name || t.debtor_name || '',
+            montant,
+          };
+        })
         .filter((t: any) => t.date && !isNaN(t.montant));
 
       const r = await importTransactions(transactions, chargesFixes);
