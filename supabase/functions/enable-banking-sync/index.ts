@@ -12,7 +12,7 @@ const CORS = {
 const APP_ID       = Deno.env.get('ENABLEBANKING_APP_ID')!;
 const PRIVATE_KEY  = Deno.env.get('ENABLEBANKING_PRIVATE_KEY')!;
 const SUPABASE_URL = 'https://qvyxdpplabsbvjvpoubf.supabase.co';
-const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_KEY')!;
+const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 function makeJWT(): string {
   const now = Math.floor(Date.now() / 1000);

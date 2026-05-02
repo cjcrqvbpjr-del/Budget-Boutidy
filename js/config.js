@@ -3,6 +3,6 @@
 // En local, créer un fichier .env.local
 export const CONFIG = {
   SUPABASE_URL: 'https://qvyxdpplabsbvjvpoubf.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2eXhkcHBsYWJzYnZqdnBvdWJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDAxMzgsImV4cCI6MjA5MTA3NjEzOH0.0MAIsFQ2EBEAVlch0Cyn8OLlNwxVBr9wrgmik4Y8sug',
+  SUPABASE_ANON_KEY: 'sb_publishable_e6y6KnVy8mHaP0wsdm9siQ_SpHccxRB',
   JOUR_DEBUT_PERIODE: 28,
 };
