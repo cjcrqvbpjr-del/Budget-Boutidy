@@ -54,43 +54,30 @@ export function labelPeriode(periode) {
   return `${debut.getDate()} ${MOIS_FR[debut.getMonth()]} → ${fin.getDate()} ${MOIS_FR[fin.getMonth()]} ${fin.getFullYear()}`;
 }
 
-// Calcule le report (solde) d'une période passée à partir de ses transactions
-// Logique : revenus réels − charges fixes réelles − épargne − dépenses variables
-// Si pas de données bancaires → utilise les paramètres configurés
+// Calcule le report (solde) d'une période passée
+// Formule : salaires configurés − charges fixes configurées − épargne − dépenses variables réelles
+// On utilise les paramètres configurés pour les revenus et charges (stables, pas pollués par
+// des crédits mal classés), et uniquement les dépenses variables réelles depuis les transactions.
 export function calculerReport(prevTransactions, parametres, chargesFixes, comptesEpargne) {
-  // Revenus réels de la période (imports bancaires type 'revenu')
-  const revenusTx = prevTransactions
-    .filter(t => t.type === 'revenu')
-    .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
-
-  // Charges fixes réellement débitées (imports bancaires type 'charge_fixe')
-  const chargesPayees = prevTransactions
-    .filter(t => t.type === 'charge_fixe')
-    .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
-
-  // Dépenses variables de la période
-  const depensesPrev = prevTransactions
-    .filter(t => t.type === 'depense')
-    .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
-
-  // Fallback paramètres si pas de données bancaires
   const salaireG = Number(parametres.salaire_g || 0);
   const salaireA = Number(parametres.salaire_a || 0);
   const foncier  = Number(parametres.foncier   || 0);
-  const revenusCfg = salaireG + salaireA + foncier;
+  const revenus  = salaireG + salaireA + foncier;
 
-  const chargesCfg = chargesFixes
+  // Charges fixes : utilise montant_reel si disponible, sinon montant_prevu
+  const totalChargesFixes = chargesFixes
     .filter(c => c.actif)
-    .reduce((s, c) => s + Math.abs(Number(c.montant_prevu || 0)), 0);
+    .reduce((s, c) => s + Math.abs(Number(c.montant_reel ?? c.montant_prevu ?? 0)), 0);
 
   const epargne = comptesEpargne
     .reduce((s, c) => s + Number(c.versement_mensuel || 0), 0);
 
-  // Utilise les vraies transactions si disponibles, sinon les paramètres
-  const revenus = revenusTx > 0 ? revenusTx : revenusCfg;
-  const charges = chargesPayees > 0 ? chargesPayees : chargesCfg;
+  // Uniquement les dépenses variables réelles (type='depense') de la période précédente
+  const depensesPrev = prevTransactions
+    .filter(t => t.type === 'depense')
+    .reduce((s, t) => s + Math.abs(Number(t.montant)), 0);
 
-  return revenus - charges - epargne - depensesPrev;
+  return revenus - totalChargesFixes - epargne - depensesPrev;
 }
 
 // Calcule le bilan budgétaire à partir des données
@@ -159,9 +146,9 @@ export function fmt(n, decimales = 2) {
   }).format(n) + '\u202f€';
 }
 
-// Formate sans décimales
+// Formate avec centimes (2 décimales)
 export function fmtCourt(n) {
-  return fmt(n, 0);
+  return fmt(n, 2);
 }
 
 // Formate une date en français
